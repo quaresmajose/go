@@ -1554,6 +1554,7 @@ func (ctxt *Link) hostlink() {
 				argv = append(argv, "-Wl,-z,relro")
 			}
 			argv = append(argv, "-shared")
+			argv = append(argv, fmt.Sprintf("-Wl,-soname,%s", filepath.Base(*flagOutfile)))
 			if ctxt.HeadType == objabi.Hwindows {
 				argv = addASLRargs(argv, *flagAslr)
 			} else {
@@ -1569,6 +1570,7 @@ func (ctxt *Link) hostlink() {
 			argv = append(argv, "-Wl,-z,relro")
 		}
 		argv = append(argv, "-shared")
+		argv = append(argv, fmt.Sprintf("-Wl,-soname,%s", filepath.Base(*flagOutfile)))
 	case BuildModePlugin:
 		if ctxt.HeadType == objabi.Hdarwin {
 			argv = append(argv, "-dynamiclib")
@@ -1577,6 +1579,7 @@ func (ctxt *Link) hostlink() {
 				argv = append(argv, "-Wl,-z,relro")
 			}
 			argv = append(argv, "-shared")
+			argv = append(argv, fmt.Sprintf("-Wl,-soname,%s", filepath.Base(*flagOutfile)))
 		}
 	}
 
