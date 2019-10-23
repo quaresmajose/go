@@ -233,6 +233,8 @@ See also: go install, go get, go clean.
 
 const concurrentGCBackendCompilationEnabledByDefault = true
 
+var goRootPrecious bool = true
+
 func init() {
 	// break init cycle
 	CmdBuild.Run = runBuild
@@ -245,6 +247,10 @@ func init() {
 	if cfg.Experiment != nil && cfg.Experiment.CoverageRedesign {
 		AddCoverFlags(CmdBuild, nil)
 		AddCoverFlags(CmdInstall, nil)
+	}
+
+	if x := os.Getenv("GOROOT_OVERRIDE"); x != "" {
+		goRootPrecious = false
 	}
 }
 
