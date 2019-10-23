@@ -198,7 +198,7 @@ if [ "$GOROOT_BOOTSTRAP" = "$GOROOT" ]; then
 	exit 1
 fi
 rm -f cmd/dist/dist
-GOROOT="$GOROOT_BOOTSTRAP" nogoenv "$GOROOT_BOOTSTRAP/bin/go" build -o cmd/dist/dist ./cmd/dist
+CC="${BUILD_CC:-${CC}}" GOROOT="$GOROOT_BOOTSTRAP" nogoenv "$GOROOT_BOOTSTRAP/bin/go" build -o cmd/dist/dist ./cmd/dist
 
 # -e doesn't propagate out of eval, so check success by hand.
 eval $(./cmd/dist/dist env -p || echo FAIL=true)
@@ -223,7 +223,7 @@ fi
 # Run dist bootstrap to complete make.bash.
 # Bootstrap installs a proper cmd/dist, built with the new toolchain.
 # Throw ours, built with the bootstrap toolchain, away after bootstrap.
-./cmd/dist/dist bootstrap -a $vflag $GO_DISTFLAGS "$@"
+CC="${BUILD_CC:-${CC}}" ./cmd/dist/dist bootstrap -a $vflag $GO_DISTFLAGS "$@"
 rm -f ./cmd/dist/dist
 
 # DO NOT ADD ANY NEW CODE HERE.
