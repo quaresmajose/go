@@ -160,6 +160,7 @@ fi
 export GOROOT_BOOTSTRAP
 
 bootstrapenv() {
+	CC="${BUILD_CC:-${CC}}" \
 	GOROOT="$GOROOT_BOOTSTRAP" GO111MODULE=off GOENV=off GOOS= GOARCH= GOEXPERIMENT= GOFLAGS= "$@"
 }
 
@@ -223,6 +224,7 @@ fi
 # Run dist bootstrap to complete make.bash.
 # Bootstrap installs a proper cmd/dist, built with the new toolchain.
 # Throw ours, built with the bootstrap toolchain, away after bootstrap.
+CC="${BUILD_CC:-${CC}}" \
 ./cmd/dist/dist bootstrap -a $vflag $GO_DISTFLAGS "$@"
 rm -f ./cmd/dist/dist
 
