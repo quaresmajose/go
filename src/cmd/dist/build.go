@@ -264,7 +264,9 @@ func xinit() {
 	}
 	xatexit(rmworkdir)
 
-	tooldir = pathf("%s/pkg/tool/%s_%s", goroot, gohostos, gohostarch)
+	if tooldir = os.Getenv("GOTOOLDIR"); tooldir == "" {
+		tooldir = pathf("%s/pkg/tool/%s_%s", goroot, gohostos, gohostarch)
+	}
 }
 
 // compilerEnv returns a map from "goos/goarch" to the
