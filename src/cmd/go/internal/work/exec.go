@@ -539,6 +539,23 @@ func (b *Builder) build(ctx context.Context, a *Action) (err error) {
 		return err
 	}
 
+	if goRootPrecious && (a.Package.Standard || a.Package.Goroot) {
+		_, err := os.Stat(a.Package.Target)
+		if err == nil {
+			a.built = a.Package.Target
+			a.Target = a.Package.Target
+			a.buildID = b.fileHash(a.Package.Target)
+			a.Package.Stale = false
+			a.Package.StaleReason = "GOROOT-resident package"
+			return nil
+		}
+		a.Package.Stale = true
+		a.Package.StaleReason = "missing or invalid GOROOT-resident package"
+		if b.IsCmdList {
+			return nil
+		}
+	}
+
 	if err := b.Mkdir(a.Objdir); err != nil {
 		return err
 	}
@@ -1720,6 +1737,14 @@ func (b *Builder) linkShared(ctx context.Context, a *Action) (err error) {
 
 	if err := AllowInstall(a); err != nil {
 		return err
+	}
+
+	if goRootPrecious && a.Package != nil {
+		p := a.Package
+		if p.Standard || p.Goroot {
+			err := fmt.Errorf("attempting to install package %s into read-only GOROOT", p.ImportPath)
+			return err
+		}
 	}
 
 	if err := b.Mkdir(a.Objdir); err != nil {
