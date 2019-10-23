@@ -718,6 +718,9 @@ func (b *Builder) addTransitiveLinkDeps(a, a1 *Action, shlib string) {
 			if p1 == nil || p1.Shlib == "" || haveShlib[filepath.Base(p1.Shlib)] {
 				continue
 			}
+			if goRootPrecious && (p1.Standard || p1.Goroot) {
+				continue
+			}
 			haveShlib[filepath.Base(p1.Shlib)] = true
 			// TODO(rsc): The use of ModeInstall here is suspect, but if we only do ModeBuild,
 			// we'll end up building an overall library or executable that depends at runtime
