@@ -51,8 +51,8 @@ func mkzdefaultcc(dir, file string) {
 		fmt.Fprintf(&buf, "package cfg\n")
 		fmt.Fprintln(&buf)
 		fmt.Fprintf(&buf, "const DefaultPkgConfig = `%s`\n", defaultpkgconfig)
-		buf.WriteString(defaultCCFunc("DefaultCC", defaultcc))
-		buf.WriteString(defaultCCFunc("DefaultCXX", defaultcxx))
+		buf.WriteString(defaultCCFunc("DefaultCC", map[string]string{"":"gcc"}))
+		buf.WriteString(defaultCCFunc("DefaultCXX", map[string]string{"":"g++"}))
 		writefile(buf.String(), file, writeSkipSame)
 		return
 	}
@@ -62,8 +62,8 @@ func mkzdefaultcc(dir, file string) {
 	fmt.Fprintf(&buf, "package main\n")
 	fmt.Fprintln(&buf)
 	fmt.Fprintf(&buf, "const defaultPkgConfig = `%s`\n", defaultpkgconfig)
-	buf.WriteString(defaultCCFunc("defaultCC", defaultcc))
-	buf.WriteString(defaultCCFunc("defaultCXX", defaultcxx))
+	buf.WriteString(defaultCCFunc("defaultCC", map[string]string{"":"gcc"}))
+	buf.WriteString(defaultCCFunc("defaultCXX", map[string]string{"":"g++"}))
 	writefile(buf.String(), file, writeSkipSame)
 }
 
