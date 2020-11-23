@@ -1354,7 +1354,7 @@ func (b *Builder) linkActionID(a *Action) cache.ActionID {
 	}
 
 	// Toolchain-dependent configuration, shared with b.linkSharedActionID.
-	b.printLinkerConfig(h, p)
+	//b.printLinkerConfig(h, p)
 
 	// Input files.
 	for _, a1 := range a.Deps {
@@ -1702,7 +1702,7 @@ func (b *Builder) linkSharedActionID(a *Action) cache.ActionID {
 	fmt.Fprintf(h, "goos %s goarch %s\n", cfg.Goos, cfg.Goarch)
 
 	// Toolchain-dependent configuration, shared with b.linkActionID.
-	b.printLinkerConfig(h, nil)
+	//b.printLinkerConfig(h, nil)
 
 	// Input files.
 	for _, a1 := range a.Deps {
