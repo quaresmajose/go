@@ -223,6 +223,8 @@ func (b *Builder) Do(ctx context.Context, root *Action) {
 	writeActionGraph()
 }
 
+var omitGopath = os.Getenv("GOPATH_OMIT_IN_ACTIONID") != ""
+
 // buildActionID computes the action ID for a build action.
 func (b *Builder) buildActionID(a *Action) cache.ActionID {
 	p := a.Package
@@ -244,7 +246,7 @@ func (b *Builder) buildActionID(a *Action) cache.ActionID {
 		if p.Module != nil {
 			fmt.Fprintf(h, "module %s@%s\n", p.Module.Path, p.Module.Version)
 		}
-	} else if p.Goroot {
+	} else if p.Goroot || omitGopath {
 		// The Go compiler always hides the exact value of $GOROOT
 		// when building things in GOROOT.
 		//
@@ -276,9 +278,9 @@ func (b *Builder) buildActionID(a *Action) cache.ActionID {
 	}
 	if len(p.CgoFiles)+len(p.SwigFiles)+len(p.SwigCXXFiles) > 0 {
 		fmt.Fprintf(h, "cgo %q\n", b.toolID("cgo"))
-		cppflags, cflags, cxxflags, fflags, ldflags, _ := b.CFlags(p)
+		cppflags, cflags, cxxflags, fflags, ldflags, _ := b.CFlags(p, true)
 
-		ccExe := b.ccExe()
+		ccExe := filterCompilerFlags(b.ccExe(), true)
 		fmt.Fprintf(h, "CC=%q %q %q %q\n", ccExe, cppflags, cflags, ldflags)
 		// Include the C compiler tool ID so that if the C
 		// compiler changes we rebuild the package.
@@ -286,14 +288,14 @@ func (b *Builder) buildActionID(a *Action) cache.ActionID {
 			fmt.Fprintf(h, "CC ID=%q\n", ccID)
 		}
 		if len(p.CXXFiles)+len(p.SwigCXXFiles) > 0 {
-			cxxExe := b.cxxExe()
+			cxxExe := filterCompilerFlags(b.cxxExe(), true)
 			fmt.Fprintf(h, "CXX=%q %q\n", cxxExe, cxxflags)
 			if cxxID, _, err := b.gccToolID(cxxExe[0], "c++"); err == nil {
 				fmt.Fprintf(h, "CXX ID=%q\n", cxxID)
 			}
 		}
 		if len(p.FFiles) > 0 {
-			fcExe := b.fcExe()
+			fcExe := filterCompilerFlags(b.fcExe(), true)
 			fmt.Fprintf(h, "FC=%q %q\n", fcExe, fflags)
 			if fcID, _, err := b.gccToolID(fcExe[0], "f95"); err == nil {
 				fmt.Fprintf(h, "FC ID=%q\n", fcID)
@@ -310,7 +312,7 @@ func (b *Builder) buildActionID(a *Action) cache.ActionID {
 		}
 	}
 	if p.Internal.BuildInfo != "" {
-		fmt.Fprintf(h, "modinfo %q\n", p.Internal.BuildInfo)
+		//fmt.Fprintf(h, "modinfo %q\n", p.Internal.BuildInfo)
 	}
 
 	// Configuration specific to compiler toolchain.
@@ -2989,8 +2991,25 @@ func envList(key, def string) []string {
 	return args
 }
 
+var filterFlags = os.Getenv("CGO_PEDANTIC") == ""
+
+func filterCompilerFlags(flags []string, keepfirst bool) []string {
+	var newflags []string
+   var realkeepfirst bool = keepfirst
+	if !filterFlags {
+		return flags
+	}
+	for _, flag := range flags {
+		if strings.HasPrefix(flag, "-m") || realkeepfirst {
+			newflags = append(newflags, flag)
+           realkeepfirst = false
+		}
+	}
+	return newflags
+}
+
 // CFlags returns the flags to use when invoking the C, C++ or Fortran compilers, or cgo.
-func (b *Builder) CFlags(p *load.Package) (cppflags, cflags, cxxflags, fflags, ldflags []string, err error) {
+func (b *Builder) CFlags(p *load.Package, filtered bool) (cppflags, cflags, cxxflags, fflags, ldflags []string, err error) {
 	if cppflags, err = buildFlags("CPPFLAGS", "", p.CgoCPPFLAGS, checkCompilerFlags); err != nil {
 		return
 	}
@@ -3005,6 +3024,13 @@ func (b *Builder) CFlags(p *load.Package) (cppflags, cflags, cxxflags, fflags, l
 	}
 	if ldflags, err = buildFlags("LDFLAGS", defaultCFlags, p.CgoLDFLAGS, checkLinkerFlags); err != nil {
 		return
+	}
+	if filtered {
+		cppflags = filterCompilerFlags(cppflags, false)
+		cflags = filterCompilerFlags(cflags, false)
+		cxxflags = filterCompilerFlags(cxxflags, false)
+		fflags = filterCompilerFlags(fflags, false)
+		ldflags = filterCompilerFlags(ldflags, false)
 	}
 
 	return
@@ -3021,7 +3047,7 @@ var cgoRe = lazyregexp.New(`[/\\:]`)
 
 func (b *Builder) cgo(a *Action, cgoExe, objdir string, pcCFLAGS, pcLDFLAGS, cgofiles, gccfiles, gxxfiles, mfiles, ffiles []string) (outGo, outObj []string, err error) {
 	p := a.Package
-	cgoCPPFLAGS, cgoCFLAGS, cgoCXXFLAGS, cgoFFLAGS, cgoLDFLAGS, err := b.CFlags(p)
+	cgoCPPFLAGS, cgoCFLAGS, cgoCXXFLAGS, cgoFFLAGS, cgoLDFLAGS, err := b.CFlags(p, false)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -3577,7 +3603,7 @@ func (b *Builder) swigIntSize(objdir string) (intsize string, err error) {
 
 // Run SWIG on one SWIG input file.
 func (b *Builder) swigOne(a *Action, p *load.Package, file, objdir string, pcCFLAGS []string, cxx bool, intgosize string) (outGo, outC string, err error) {
-	cgoCPPFLAGS, cgoCFLAGS, cgoCXXFLAGS, _, _, err := b.CFlags(p)
+	cgoCPPFLAGS, cgoCFLAGS, cgoCXXFLAGS, _, _, err := b.CFlags(p, false)
 	if err != nil {
 		return "", "", err
 	}

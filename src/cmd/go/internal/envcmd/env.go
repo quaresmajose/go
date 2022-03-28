@@ -183,7 +183,7 @@ func ExtraEnvVarsCostly() []cfg.EnvVar {
 		}
 	}()
 
-	cppflags, cflags, cxxflags, fflags, ldflags, err := b.CFlags(&load.Package{})
+	cppflags, cflags, cxxflags, fflags, ldflags, err := b.CFlags(&load.Package{}, false)
 	if err != nil {
 		// Should not happen - b.CFlags was given an empty package.
 		fmt.Fprintf(os.Stderr, "go: invalid cflags: %v\n", err)
