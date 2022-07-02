@@ -2229,6 +2229,17 @@ func appendBuildSetting(info *debug.BuildInfo, key, value string) {
 	info.Settings = append(info.Settings, debug.BuildSetting{Key: key, Value: value})
 }
 
+func filterCompilerFlags(flags string) string {
+	var newflags []string
+	for _, flag := range strings.Fields(flags) {
+		if strings.HasPrefix(flag, "--sysroot") || strings.HasPrefix(flag, "-fmacro-prefix-map") || strings.HasPrefix(flag, "-fdebug-prefix-map") {
+			continue
+		}
+		newflags = append(newflags, flag)
+	}
+	return strings.Join(newflags, " ")
+}
+
 // setBuildInfo gathers build information and sets it into
 // p.Internal.BuildInfo, which will later be formatted as a string and embedded
 // in the binary. setBuildInfo should only be called on a main package with no
@@ -2336,7 +2347,7 @@ func (p *Package) setBuildInfo(ctx context.Context, autoVCS bool) {
 	if gcflags := BuildGcflags.String(); gcflags != "" && cfg.BuildContext.Compiler == "gc" {
 		appendSetting("-gcflags", gcflags)
 	}
-	if ldflags := BuildLdflags.String(); ldflags != "" {
+	if ldflags := filterCompilerFlags(BuildLdflags.String()); ldflags != "" {
 		// https://go.dev/issue/52372: only include ldflags if -trimpath is not set,
 		// since it can include system paths through various linker flags (notably
 		// -extar, -extld, and -extldflags).
@@ -2382,7 +2393,7 @@ func (p *Package) setBuildInfo(ctx context.Context, autoVCS bool) {
 	// subset of flags that are known not to be paths?
 	if cfg.BuildContext.CgoEnabled && !cfg.BuildTrimpath {
 		for _, name := range []string{"CGO_CFLAGS", "CGO_CPPFLAGS", "CGO_CXXFLAGS", "CGO_LDFLAGS"} {
-			appendSetting(name, cfg.Getenv(name))
+			appendSetting(name, filterCompilerFlags(cfg.Getenv(name)))
 		}
 	}
 	appendSetting("GOARCH", cfg.BuildContext.GOARCH)
