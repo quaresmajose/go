@@ -1422,6 +1422,29 @@ func (b *Builder) linkActionID(a *Action) cache.ActionID {
 	return h.Sum()
 }
 
+func filterLinkerFlags(flags []string) []string {
+	var newflags []string
+	var skipflag bool
+	skipflag = false
+	for i, flag := range flags {
+		if skipflag == true {
+			skipflag = false
+			continue
+		}
+		if strings.HasPrefix(flag, "--sysroot") || strings.HasPrefix(flag, "-fmacro-prefix-map") || strings.HasPrefix(flag, "-fdebug-prefix-map") || strings.HasPrefix(flag, "-ffile-prefix-map") || strings.HasPrefix(flag, "-fcanon-prefix-map") || strings.HasPrefix(flag, "-fprofile-prefix-map") || strings.HasPrefix(flag, "-Wl,-rpath-link"){
+			continue
+		} else if strings.HasPrefix(flag, "-extldflags") {
+			skipflag = true
+			newflags = append(newflags, flag)
+			var filterd_Extldflags []string = filterLinkerFlags(strings.Split(flags[i+1], " "))
+			newflags = append(newflags, strings.Join(filterd_Extldflags, " "))
+		} else {
+			newflags = append(newflags, flag)
+		}
+	}
+	return newflags
+}
+
 // printLinkerConfig prints the linker config into the hash h,
 // as part of the computation of a linker-related action ID.
 func (b *Builder) printLinkerConfig(h io.Writer, p *load.Package) {
@@ -1432,7 +1455,7 @@ func (b *Builder) printLinkerConfig(h io.Writer, p *load.Package) {
 	case "gc":
 		fmt.Fprintf(h, "link %s %q %s\n", b.toolID("link"), forcedLdflags, ldBuildmode)
 		if p != nil {
-			fmt.Fprintf(h, "linkflags %q\n", p.Internal.Ldflags)
+			fmt.Fprintf(h, "linkflags %q\n", filterLinkerFlags(p.Internal.Ldflags))
 		}
 
 		// GOARM, GOMIPS, etc.
